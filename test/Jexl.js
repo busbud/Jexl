@@ -4,13 +4,10 @@
  */
 
 var chai = require('chai'),
-  chaiAsPromised = require('chai-as-promised'),
   should = require('chai').should(),
   sinon = require('sinon'),
   Jexl = require('../lib/Jexl'),
   Parser = require('../lib/parser/Parser');
-
-chai.use(chaiAsPromised);
 
 var inst;
 
@@ -18,24 +15,13 @@ describe('Jexl', function() {
   beforeEach(function() {
     inst = new Jexl.Jexl();
   });
-  it('should resolve Promise on success', function() {
-    return inst.eval('2+2').should.become(4);
+  it('should succeed', function() {
+    inst.eval('2+2').should.equal(4);
   });
-  it('should reject Promise on error', function() {
-    return inst.eval('2++2').should.reject;
-  });
-  it('should call callback with success result', function(done) {
-    inst.eval('2+2', function(err, res) {
-      res.should.equal(4);
-      done(err);
-    });
-  });
-  it('should call callback with error result', function(done) {
-    inst.eval('2++2', function(err, res) {
-      should.exist(err);
-      should.not.exist(res);
-      done();
-    });
+  it('should throw on error', function() {
+    (function() {
+      inst.eval('2++2');
+    }).should.throw(Error);
   });
   it('should allow transforms to be defined', function() {
     inst.addTransform('toCase', function(val, args) {
@@ -43,8 +29,7 @@ describe('Jexl', function() {
         return val.toUpperCase();
       return val.toLowerCase();
     });
-    return inst.eval('"hello"|toCase({case:"upper"})')
-      .should.become('HELLO');
+    inst.eval('"hello"|toCase({case:"upper"})').should.equal('HELLO');
   });
   it('should allow transforms to be retrieved', function() {
     inst.addTransform('ret2', function() { return 2; });
@@ -57,16 +42,16 @@ describe('Jexl', function() {
       add1: function(val) { return val + 1; },
       add2: function(val) { return val + 2; }
     });
-    return inst.eval('2|add1|add2').should.become(5);
+    inst.eval('2|add1|add2').should.equal(5);
   });
   it('should pass context', function() {
-    return inst.eval('foo', {foo: 'bar'}).should.become('bar');
+    inst.eval('foo', {foo: 'bar'}).should.equal('bar');
   });
   it('should allow binaryOps to be defined', function() {
     inst.addBinaryOp('_=', 20, function(left, right) {
       return left.toLowerCase() === right.toLowerCase();
     });
-    return inst.eval('"FoO" _= "fOo"').should.become(true);
+    inst.eval('"FoO" _= "fOo"').should.equal(true);
   });
   it('should observe weight on binaryOps', function() {
     inst.addBinaryOp('**', 0, function(left, right) {
@@ -75,24 +60,26 @@ describe('Jexl', function() {
     inst.addBinaryOp('***', 1000, function(left, right) {
       return left * 2 + right * 2;
     });
-    return Promise.all([
-      inst.eval('1 + 2 ** 3 + 4'),
-      inst.eval('1 + 2 *** 3 + 4')
-    ]).should.become([20, 15]);
+    inst.eval('1 + 2 ** 3 + 4').should.equal(20);
+    inst.eval('1 + 2 *** 3 + 4').should.equal(15);
   });
   it('should allow unaryOps to be defined', function() {
     inst.addUnaryOp('~', function(right) {
       return Math.floor(right);
     });
-    return inst.eval('~5.7 + 5').should.become(10);
+    inst.eval('~5.7 + 5').should.equal(10);
   });
   it('should allow binaryOps to be removed', function() {
     inst.removeOp('+');
-    return inst.eval('1+2').should.reject;
+    (function() {
+      inst.eval('1+2')
+    }).should.throw(Error);
   });
   it('should allow unaryOps to be removed', function() {
     inst.removeOp('!');
-    return inst.eval('!true').should.reject;
+    (function() {
+      inst.eval('!true')
+    }).should.throw(Error);
   });
 
   describe('parser cache', function() {
@@ -112,19 +99,15 @@ describe('Jexl', function() {
     });
 
     it('should call parser.complete on the first run', function() {
-      return static_inst.eval('8+8')
-        .then(function(res) {
-          res.should.equal(16);
-          Parser.prototype.complete.callCount.should.equal(1);
-        });
+      var res = static_inst.eval('8+8');
+      res.should.equal(16);
+      Parser.prototype.complete.callCount.should.equal(1);
     });
 
     it('should not call parser.complete on the second run', function() {
-      return static_inst.eval('8+8')
-        .then(function(res) {
-          res.should.equal(16);
-          Parser.prototype.complete.callCount.should.equal(0);
-        });
+      var res = static_inst.eval('8+8');
+      res.should.equal(16);
+      Parser.prototype.complete.callCount.should.equal(0);
     });
 
     it('should clear the parser cache when adding a new op', function() {
