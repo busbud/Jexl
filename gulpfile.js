@@ -5,7 +5,7 @@
 
 var browserify = require('browserify'),
   gulp = require('gulp'),
-  transform = require('vinyl-transform'),
+  through2 = require('through2'),
   uglify = require('gulp-uglify'),
   rename = require('gulp-rename'),
   path = require('path'),
@@ -14,13 +14,16 @@ var browserify = require('browserify'),
   mocha = require('gulp-mocha');
 
 gulp.task('dist', function() {
-  // transform regular node stream to gulp (buffered vinyl) stream
-  var browserified = transform(function(filename) {
+  // transform regular node stream to gulp stream using through2
+  var browserified = through2.obj(function(file, enc, next) {
     var b = browserify({
-      paths: [path.dirname(filename)]
+      paths: [path.dirname(file.path)]
     });
-    b.require(path.basename(filename, '.js'));
-    return b.bundle();
+    b.require(path.basename(file.path, '.js'));
+    return b.bundle(function(err, res) {
+      file.contents = res;
+      next(null, file);
+    });
   });
   return gulp.src('./lib/Jexl.js')
     .pipe(browserified)
