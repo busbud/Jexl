@@ -34,7 +34,6 @@
   "devDependencies": {
     "browserify": "=9.0.3",
     "chai": "^2.0.0",
-    "chai-as-promised": "^4.2.0",
     "gulp": "=3.8.11",
     "gulp-istanbul": "^0.6.0",
     "gulp-istanbul-enforcer": "^1.0.3",
